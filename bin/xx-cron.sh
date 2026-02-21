@@ -32,7 +32,7 @@ esac
 source "$(dirname "$0")/../lib/common.sh"
 
 DST="$ROOT/BackUps/cron"
-STATE="$ROOT/state/cron.hash"
+STATE_FILE="$ROOT/state/cron.hash"
 
 SRC_ETC=(
   /etc/crontab
@@ -71,12 +71,12 @@ echo "DEBUG: hash_rc=$hash_rc"
 echo "DEBUG: new_hash=$new_hash"
 echo "cron: after hash"
 
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "cron: before tar"
       tar -czf "$DST/cron.tar.gz" "${HASH_INPUTS[@]}"
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
     fi
     ;;
   
@@ -103,13 +103,13 @@ echo "cron: after hash"
     ;;
 
   status)
-    if [[ ! -f "$STATE" ]]; then
+    if [[ ! -f "$STATE_FILE" ]]; then
       echo "cron: NO BASELINE"
       exit 0
     fi
     
     new_hash=$(hash_tree "${SRC_ETC[@]}" "$SRC_VAR")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "cron: CHANGED"

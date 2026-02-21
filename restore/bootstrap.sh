@@ -9,8 +9,15 @@ BACKUPS_DIR="$ARCHBAK_DIR/BackUps"
 STATE_DIR="$ARCHBAK_DIR/state"
 
 GIT_REPO_URL="https://github.com/ontin000/ArchBak.git"
+
+HOST="$(hostname -s | tr '[:upper:]' '[:lower:]')"
+
 RCLONE_REMOTE="MJB-B2"
-RCLONE_PATH="BackUps-Studiohead/ArchBak"
+RCLONE_ROOT="BackUps-${HOST}"
+RCLONE_PATH="${RCLONE_ROOT}/ArchBak"
+
+#LOCAL_BACKUPS="$HOME/ArchBak/BackUps"#RCLONE_REMOTE="MJB-B2"
+#RCLONE_PATH="BackUps-Studiohead/ArchBak"
 
 # ----------------------------
 # Helpers
@@ -61,20 +68,9 @@ fi
 
 echo "==> etckeeper present"
 
-echo "==> Ensuring Git identity for /etc (etckeeper)"
-
-if [[ -d /etc/.git ]]; then
-  if ! sudo git -C /etc config user.name >/dev/null; then
-    sudo git -C /etc config user.name "ArchBak etckeeper"
-    sudo git -C /etc config user.email "root@$(hostname)"
-    echo "    Set etckeeper Git identity"
-  else
-    echo "    etckeeper Git identity already configured"
-  fi
-else
-  echo "    /etc/.git not present yet (will be initialized during restore)"
-fi
-
+echo "==> Ensuring Git identity for etckeeper (/etc)"
+sudo git -C /etc config user.name "ArchBak etckeeper"
+sudo git -C /etc config user.email "root@$(hostname)"
 echo "==> Ensuring /etc is under etckeeper control"
 
 if [[ ! -d /etc/.git ]]; then
@@ -94,10 +90,10 @@ echo "==> Syncing backups from rclone"
 echo "    Source: ${RCLONE_REMOTE}:${RCLONE_PATH}"
 echo "    Dest:   ${BACKUPS_DIR}"
 
-rclone sync \
-  "${RCLONE_REMOTE}:${RCLONE_PATH}" \
-  "$BACKUPS_DIR" \
-  --progress
+#rclone sync \
+#  "${RCLONE_REMOTE}:${RCLONE_PATH}" \
+#  "$BACKUPS_DIR" \
+#  --progress
 
 echo
 echo "==> Bootstrap complete"

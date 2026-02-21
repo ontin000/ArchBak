@@ -14,7 +14,7 @@ case "$ACTION" in
 esac
 
 DST="$ROOT/BackUps/users"
-STATE="$ROOT/state/users.hash"
+STATE_FILE="$ROOT/state/users.hash"
 
 FILES=(
   /etc/passwd
@@ -40,20 +40,20 @@ case "$ACTION" in
     mapfile -t USERS < <(awk -F: '$3 >= 1000 {print $1}' /etc/passwd)
 
     if [[ ${#USERS[@]} -eq 0 ]]; then
-      echo "$EMPTY_HASH" > "$STATE"
+      echo "$EMPTY_HASH" > "$STATE_FILE"
       exit 0
     fi
 
     mkdir -p "$DST"
 
     new_hash=$(hash_tree "${FILES[@]}" "$SUDOERS_DIR")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       tar -czf "$DST/users.tar.gz" \
         "${FILES[@]}" \
         "$SUDOERS_DIR"
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
     fi
     ;;
 
@@ -78,7 +78,7 @@ case "$ACTION" in
 
   status)
     new_hash=$(hash_tree "${FILES[@]}" "$SUDOERS_DIR")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "users: CHANGED"

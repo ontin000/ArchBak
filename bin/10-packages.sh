@@ -10,11 +10,11 @@ source "$(dirname "$0")/../lib/common.sh"
 # Configuration
 # -------------------------------------------------------------------
 DST="$ROOT/BackUps/packages"
-STATE="$STATE_DIR/packages.hash"
+STATE_FILE="$STATE_DIR/packages.hash"
 
-PKG_EXPLICIT="$DST/packages-explicit.txt"   # pacman -Qqe (restore input)
-PKG_FOREIGN="$DST/packages-foreign.txt"     # pacman -Qqm (AUR)
-PKG_MANIFEST="$DST/packages-manifest.txt"   # pacman -Qq  (audit only)
+PKG_EXPLICIT="$DST/pacman-explicit.txt"   # pacman -Qqe (restore input)
+PKG_FOREIGN="$DST/pacman-foreign.txt"     # pacman -Qqm (AUR)
+PKG_MANIFEST="$DST/pacman-manifest.txt"   # pacman -Qq  (audit only)
 
 ACTION="${1:-}"
 
@@ -42,16 +42,16 @@ case "$ACTION" in
     mkdir -p "$DST"
 
     # Explicitly installed packages (restore truth)
-    pacman -Qqe > "$PKG_EXPLICIT"
+    pacman -Qneq > "$PKG_EXPLICIT"
 
     # Foreign / AUR packages
-    pacman -Qqm > "$PKG_FOREIGN"
+    pacman -Qmeq > "$PKG_FOREIGN"
 
     # Full manifest (audit / diff only)
     pacman -Qq > "$PKG_MANIFEST"
 
     new_hash=$(hash_packages)
-    echo "$new_hash" > "$STATE"
+    echo "$new_hash" > "$STATE_FILE"
     ;;
 
   status)

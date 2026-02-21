@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+source "$(dirname "$0")/../lib/common.sh"
+# shellcheck source=../lib/common.sh
+
 # ----------------------------
 # ArchBak: etckeeper subsystem
 # ----------------------------
 
-ROOT="$HOME/ArchBak"
+#USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
+#ROOT="$USER_HOME/ArchBak"
 DST="$ROOT/BackUps/etc-git"
-STATE="$ROOT/state/etc.hash"
-
-# shellcheck source=../lib/common.sh
-source "$(dirname "$0")/../lib/common.sh"
+STATE_FILE="$ROOT/state/etc.hash"
 
 ACTION="${1:-}"
 
@@ -32,14 +33,14 @@ case "$ACTION" in
       exit 0
     fi
 
-    mkdir -p "$DST" "$(dirname "$STATE")"
+    mkdir -p "$DST" "$(dirname "$STATE_FILE")"
 
     new_hash="$(hash_tree /etc/.git)"
-    old_hash="$(cat "$STATE" 2>/dev/null || true)"
+    old_hash="$(cat "$STATE_FILE" 2>/dev/null || true)"
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       rsync -a --delete /etc/.git/ "$DST/"
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
       echo "etckeeper: backed up /etc/.git"
     else
       echo "etckeeper: no changes"
@@ -71,13 +72,13 @@ case "$ACTION" in
       exit 0
     fi
 
-    if [[ ! -f "$STATE" ]]; then
+    if [[ ! -f "$STATE_FILE" ]]; then
       echo "etckeeper: NO BASELINE"
       exit 0
     fi
 
     current_hash="$(hash_tree /etc/.git)"
-    saved_hash="$(cat "$STATE")"
+    saved_hash="$(cat "$STATE_FILE")"
 
     if [[ "$current_hash" == "$saved_hash" ]]; then
       echo "etckeeper: OK"

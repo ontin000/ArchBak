@@ -14,7 +14,7 @@ case "$ACTION" in
 esac
 
 DST="$ROOT/BackUps/systemd"
-STATE="$ROOT/state/systemd.hash"
+STATE_FILE="$ROOT/state/systemd.hash"
 
 SYSTEMD_ETC="/etc/systemd/system"
 
@@ -37,11 +37,11 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree "$SYSTEMD_ETC")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       tar -czf "$DST/systemd-etc.tar.gz" "$SYSTEMD_ETC"
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
     fi
     ;;
 
@@ -72,7 +72,7 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree "$SYSTEMD_ETC")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "systemd: CHANGED"

@@ -14,7 +14,7 @@ case "$ACTION" in
 esac
 
 DST="$ROOT/BackUps/network"
-STATE="$ROOT/state/network.hash"
+STATE_FILE="$ROOT/state/network.hash"
 
 NETCTL_DIR="/etc/netctl"
 SYSTEMD_NETCTL="/etc/systemd/system"
@@ -44,13 +44,13 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree "$NETCTL_DIR" $(netctl_units))
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       tar -czf "$DST/netctl.tar.gz" \
         "$NETCTL_DIR" \
         $(netctl_units)
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
     fi
     ;;
 
@@ -80,7 +80,7 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree "$NETCTL_DIR" $(netctl_units))
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "network: CHANGED"

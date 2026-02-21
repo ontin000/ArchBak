@@ -21,7 +21,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # ---- paths ---------------------------------------------------------------
 DST="$ROOT/BackUps/cron"
-STATE="$STATE_DIR/cron.hash"
+STATE_FILE="$STATE_DIR/cron.hash"
 
 # Cron locations are optional on many systems
 CRON_PATHS=(
@@ -55,14 +55,14 @@ case "$ACTION" in
 
     # Compute hash over whatever exists (may be empty)
     new_hash=$(hash_tree "${ARCHIVE_INPUTS[@]}")
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     # SHA256 of empty input (nothing meaningful to back up)
     EMPTY_HASH="e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
     # Nothing meaningful present → record state and succeed
     if [[ "$new_hash" == "$EMPTY_HASH" ]]; then
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
       exit 0
     fi
 
@@ -73,7 +73,7 @@ case "$ACTION" in
 
     # Real cron content changed → archive and record
     tar -czf "$DST/cron.tar.gz" "${ARCHIVE_INPUTS[@]}"
-    echo "$new_hash" > "$STATE"
+    echo "$new_hash" > "$STATE_FILE"
     exit 0
     ;;
   restore)
@@ -91,7 +91,7 @@ case "$ACTION" in
 
     [[ -d "$CRON_SPOOL" ]] && CHECK_INPUTS+=("$CRON_SPOOL")
 
-    if [[ ! -f "$STATE" ]]; then
+    if [[ ! -f "$STATE_FILE" ]]; then
       echo "cron: NO BASELINE"
       exit 0
     fi
@@ -102,7 +102,7 @@ case "$ACTION" in
       new_hash=$(hash_tree "${CHECK_INPUTS[@]}")
     fi
 
-    old_hash=$(cat "$STATE")
+    old_hash=$(cat "$STATE_FILE")
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "cron: CHANGED"

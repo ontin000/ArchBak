@@ -14,7 +14,7 @@ case "$ACTION" in
 esac
 
 DST="$ROOT/BackUps/ssh"
-STATE="$ROOT/state/ssh.hash"
+STATE_FILE="$ROOT/state/ssh.hash"
 
 SSH_DIR="/etc/ssh"
 KEY_GLOB="$SSH_DIR/ssh_host_*_key*"
@@ -38,11 +38,11 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree $KEY_GLOB)
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       tar -czf "$DST/ssh-host-keys.tar.gz" $KEY_GLOB
-      echo "$new_hash" > "$STATE"
+      echo "$new_hash" > "$STATE_FILE"
     fi
     ;;
 
@@ -76,7 +76,7 @@ case "$ACTION" in
     fi
 
     new_hash=$(hash_tree $KEY_GLOB)
-    old_hash=$(cat "$STATE" 2>/dev/null || true)
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
     if [[ "$new_hash" != "$old_hash" ]]; then
       echo "ssh: CHANGED"
