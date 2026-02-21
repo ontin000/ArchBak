@@ -1,0 +1,11 @@
+# Runtime data (never versioned)
+BackUps/
+state/
+
+# Editor / OS noise
+*.swp
+*.tmp
+*.bak
+.DS_Store
+.vscode/
+.idea/
