@@ -36,9 +36,6 @@ if [[ ! -d "$BIN" ]]; then
   exit 1
 fi
 
-echo "=== ArchBak runner: action=$ACTION ==="
-echo
-
 # Run all numbered scripts in order
 for script in "$BIN"/[0-9][0-9]-*.sh; do
   if [[ ! -x "$script" ]]; then

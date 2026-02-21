@@ -1,111 +1,93 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# -------------------------------------------------------------------
-# Shared library
-# -------------------------------------------------------------------
 source "$(dirname "$0")/../lib/common.sh"
 
-# -------------------------------------------------------------------
-# Configuration
-# -------------------------------------------------------------------
-DST="$ROOT/BackUps/packages"
-STATE_FILE="$STATE_DIR/packages.hash"
+NAME="packages"
 
-PKG_EXPLICIT="$DST/pacman-explicit.txt"   # pacman -Qqe (restore input)
-PKG_FOREIGN="$DST/pacman-foreign.txt"     # pacman -Qqm (AUR)
-PKG_MANIFEST="$DST/pacman-manifest.txt"   # pacman -Qq  (audit only)
+DST="$ROOT/BackUps/packages"
+STATE_FILE="$ROOT/state/packages.hash"
+
+PKG_EXPLICIT="$DST/packages-explicit.txt"   # pacman -Qqe
+PKG_FOREIGN="$DST/packages-foreign.txt"     # pacman -Qqm
+PKG_MANIFEST="$DST/packages-manifest.txt"   # pacman -Qq
 
 ACTION="${1:-}"
 
 case "$ACTION" in
-  backup|restore|status) ;;
-  *)
-    echo "Usage: $(basename "$0") {backup|status|restore}" >&2
-    exit 1
-    ;;
-esac
-
-# -------------------------------------------------------------------
-# Helpers
-# -------------------------------------------------------------------
-hash_packages() {
-  sha256sum "$PKG_EXPLICIT" "$PKG_FOREIGN" 2>/dev/null \
-    | sha256sum | awk '{print $1}'
-}
-
-# -------------------------------------------------------------------
-# Main
-# -------------------------------------------------------------------
-case "$ACTION" in
   backup)
-    mkdir -p "$DST"
+    mkdir -p "$DST" "$(dirname "$STATE_FILE")"
 
-    # Explicitly installed packages (restore truth)
-    pacman -Qneq | sort > "$PKG_EXPLICIT"
+    # Generate normalized package lists
+    pacman -Qqen | sort > "$PKG_EXPLICIT"
+    pacman -Qqme | sort > "$PKG_FOREIGN"
+    pacman -Qq   | sort > "$PKG_MANIFEST"
 
-    # Foreign / AUR packages
-    pacman -Qmeq | sort > "$PKG_FOREIGN"
+    # Snapshot hash (entire directory)
+    new_hash=$(hash_tree "$DST")
+    old_hash=$(cat "$STATE_FILE" 2>/dev/null || true)
 
-    # Full manifest (audit / diff only)
-    pacman -Qq | sort > "$PKG_MANIFEST"
-
-    new_hash=$(hash_packages)
-    echo "$new_hash" > "$STATE_FILE"
+    if [[ "$new_hash" != "$old_hash" ]]; then
+      echo "$new_hash" > "$STATE_FILE"
+    fi
     ;;
 
   status)
-    if [[ ! -f "$PKG_EXPLICIT" ]]; then
-      echo "packages: NO BASELINE"
+    if [[ ! -f "$STATE_FILE" ]]; then
+      echo "$NAME: NO BASELINE"
       exit 0
     fi
 
-    current_explicit_hash=$(pacman -Qneq | sort | sha256sum | awk '{print $1}')
-    saved_explicit_hash=$(sha256sum "$PKG_EXPLICIT" | awk '{print $1}')
+    if [[ ! -d "$DST" ]]; then
+      echo "$NAME: MISSING"
+      exit 1
+    fi
 
-    if [[ "$current_explicit_hash" != "$saved_explicit_hash" ]]; then
-      echo "packages: CHANGED"
+    new_hash=$(hash_tree "$DST")
+    old_hash=$(cat "$STATE_FILE")
+
+    if [[ "$new_hash" == "$old_hash" ]]; then
+      echo "$NAME: OK"
     else
-      echo "packages: OK"
+      echo "$NAME: CHANGED"
     fi
     ;;
 
   restore)
     if [[ ! -f "$PKG_EXPLICIT" ]]; then
-      echo "packages: no explicit package list to restore" >&2
+      echo "[FAIL] No package backup found"
       exit 1
     fi
 
-    echo "==> Refreshing pacman databases"
+    echo "==> Restoring pacman packages"
+
+    # Ensure keyring & databases are sane
     pacman -Syy --noconfirm
+    pacman -Sy --noconfirm archlinux-keyring
+    
 
-    echo "==> Ensuring keyring is up to date"
-    pacman -S --noconfirm archlinux-keyring
-    pacman-key --init
-    pacman-key --populate archlinux
+    # Install repo packages
+    pacman -S --needed --noconfirm \
+      --overwrite='*' \
+      $(<"$PKG_EXPLICIT")
 
-    echo "==> Restoring official packages"
-    pacman -S --needed --noconfirm --overwrite '*' - < "$PKG_EXPLICIT"
-
-    # AUR restore is optional but supported
+    # Install AUR packages if present
     if [[ -s "$PKG_FOREIGN" ]]; then
       if ! command -v yay >/dev/null 2>&1; then
-        echo "==> Installing yay (AUR helper)"
-        pacman -S --needed --noconfirm base-devel git
-        tmpdir=$(mktemp -d)
-        git clone https://aur.archlinux.org/yay.git "$tmpdir/yay"
-        (cd "$tmpdir/yay" && makepkg -si --noconfirm)
-        rm -rf "$tmpdir"
+        echo "[FAIL] yay not installed (required for AUR restore)"
+        exit 1
       fi
 
-      echo "==> Restoring AUR packages"
       yay -S --needed --noconfirm \
-          --overwrite '*' \
-          --answerclean all \
-          --answerdiff none \
-          - < "$PKG_FOREIGN"
-    else
-      echo "==> No AUR packages to restore"
+        --overwrite='*' \
+        --answerclean All \
+        --answerdiff None \
+        $(<"$PKG_FOREIGN")
     fi
+    ;;
+
+  *)
+    echo "Usage: $0 {backup|status|restore}"
+    exit 1
     ;;
 esac
