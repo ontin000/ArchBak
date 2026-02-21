@@ -42,13 +42,13 @@ case "$ACTION" in
     mkdir -p "$DST"
 
     # Explicitly installed packages (restore truth)
-    pacman -Qneq > "$PKG_EXPLICIT"
+    pacman -Qneq | sort > "$PKG_EXPLICIT"
 
     # Foreign / AUR packages
-    pacman -Qmeq > "$PKG_FOREIGN"
+    pacman -Qmeq | sort > "$PKG_FOREIGN"
 
     # Full manifest (audit / diff only)
-    pacman -Qq > "$PKG_MANIFEST"
+    pacman -Qq | sort > "$PKG_MANIFEST"
 
     new_hash=$(hash_packages)
     echo "$new_hash" > "$STATE_FILE"
@@ -60,7 +60,7 @@ case "$ACTION" in
       exit 0
     fi
 
-    current_explicit_hash=$(pacman -Qqe | sha256sum | awk '{print $1}')
+    current_explicit_hash=$(pacman -Qneq | sort | sha256sum | awk '{print $1}')
     saved_explicit_hash=$(sha256sum "$PKG_EXPLICIT" | awk '{print $1}')
 
     if [[ "$current_explicit_hash" != "$saved_explicit_hash" ]]; then
