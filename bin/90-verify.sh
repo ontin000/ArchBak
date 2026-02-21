@@ -69,6 +69,21 @@ else
   fail "/etc/systemd/system missing"
 fi
 
+# ----------------------------
+# etckeeper verification
+# ----------------------------
+if ! command -v etckeeper >/dev/null 2>&1; then
+  warn "etckeeper not installed"
+else
+  if [[ ! -d /etc/.git ]]; then
+    warn "/etc not under etckeeper control"
+  elif [[ ! -d "$ROOT/BackUps/etc-git" ]]; then
+    warn "No etckeeper backup found"
+  else
+    ok "etckeeper configuration present"
+  fi
+fi
+
 # ------------------------------------------------------------
 # cron
 # ------------------------------------------------------------

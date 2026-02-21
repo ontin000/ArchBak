@@ -52,6 +52,29 @@ else
   (cd "$ARCHBAK_DIR" && git pull)
 fi
 
+echo "==> Checking etckeeper availability"
+sudo pacman -S --needed --noconfirm etckeeper git
+
+if ! command -v etckeeper >/dev/null 2>&1; then
+  die "etckeeper not installed"
+fi
+
+echo "==> etckeeper present"
+
+echo "==> Ensuring Git identity for /etc (etckeeper)"
+
+if [[ -d /etc/.git ]]; then
+  if ! sudo git -C /etc config user.name >/dev/null; then
+    sudo git -C /etc config user.name "ArchBak etckeeper"
+    sudo git -C /etc config user.email "root@$(hostname)"
+    echo "    Set etckeeper Git identity"
+  else
+    echo "    etckeeper Git identity already configured"
+  fi
+else
+  echo "    /etc/.git not present yet (will be initialized during restore)"
+fi
+
 echo "==> Verifying rclone remote: $RCLONE_REMOTE"
 if ! rclone listremotes | grep -q "^${RCLONE_REMOTE}:"; then
   die "rclone remote '$RCLONE_REMOTE' not configured. Run: rclone config"
