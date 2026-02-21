@@ -51,6 +51,9 @@ need_cmd rclone
 echo "==> Ensuring ArchBak directory structure"
 mkdir -p "$ARCHBAK_DIR" "$BACKUPS_DIR" "$STATE_DIR"
 
+echo "==> Checking etckeeper availability"
+sudo pacman -S --needed --noconfirm etckeeper git
+
 echo "==> Fetching ArchBak scripts from Git"
 if [[ ! -d "$ARCHBAK_DIR/.git" ]]; then
   git clone "$GIT_REPO_URL" "$ARCHBAK_DIR"
@@ -59,8 +62,29 @@ else
   (cd "$ARCHBAK_DIR" && git pull)
 fi
 
-echo "==> Checking etckeeper availability"
-sudo pacman -S --needed --noconfirm etckeeper git
+echo "==> Ensuring ArchBak branch matches remote default"
+
+DEFAULT_BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+
+if [[ -z "$DEFAULT_BRANCH" ]]; then
+  echo "[FAIL] Could not determine remote default branch"
+  exit 1
+fi
+
+CURRENT_BRANCH="$(git branch --show-current)"
+
+if [[ "$CURRENT_BRANCH" != "$DEFAULT_BRANCH" ]]; then
+  echo "    Switching branch '$CURRENT_BRANCH' → '$DEFAULT_BRANCH'"
+
+  # Rename local branch if it exists
+  if git show-ref --verify --quiet "refs/heads/$CURRENT_BRANCH"; then
+    git branch -m "$CURRENT_BRANCH" "$DEFAULT_BRANCH" || git checkout "$DEFAULT_BRANCH"
+  else
+    git checkout "$DEFAULT_BRANCH"
+  fi
+fi
+
+git branch -u "origin/$DEFAULT_BRANCH" "$DEFAULT_BRANCH"
 
 if ! command -v etckeeper >/dev/null 2>&1; then
   die "etckeeper not installed"
