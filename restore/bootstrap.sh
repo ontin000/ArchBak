@@ -75,6 +75,16 @@ else
   echo "    /etc/.git not present yet (will be initialized during restore)"
 fi
 
+echo "==> Ensuring /etc is under etckeeper control"
+
+if [[ ! -d /etc/.git ]]; then
+  echo "    Initializing etckeeper for /etc"
+  sudo etckeeper init
+  sudo etckeeper commit "Initial /etc baseline (bootstrap)"
+else
+  echo "    /etc already under etckeeper control"
+fi
+
 echo "==> Verifying rclone remote: $RCLONE_REMOTE"
 if ! rclone listremotes | grep -q "^${RCLONE_REMOTE}:"; then
   die "rclone remote '$RCLONE_REMOTE' not configured. Run: rclone config"
